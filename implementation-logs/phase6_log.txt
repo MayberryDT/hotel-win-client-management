@@ -1,0 +1,31 @@
+Phase 6: Task Completion & History (UI + Logic) - Completed
+
+- Added `completedTasks` array to global state in `static/js/app.js`.
+- Modified `renderTaskList` in `app.js`:
+  - Filtered to show only active tasks (`is_completed = false`).
+  - Added a completion checkbox (`<input type="checkbox">`) to each task item.
+  - Attached event listener to checkbox to trigger `toggleTaskCompletion` on change.
+- Implemented `toggleTaskCompletion(taskId, markComplete)` in `app.js`:
+  - Determines API endpoint (`/complete` or `/incomplete`).
+  - Sends `PATCH` request to the backend.
+  - On success, calls `fetchInitialData()` to refresh active tasks.
+  - If history is visible, calls `fetchHistoryData()` to refresh completed tasks.
+  - Resets form if the undone task was being edited.
+- Implemented `fetchHistoryData()` in `app.js` to call `GET /api/tasks/history` and store results in `completedTasks`.
+- Implemented `renderHistoryList()` in `app.js`:
+  - Clears and renders the `#completed-task-list`.
+  - Sorts completed tasks by `completed_at` descending.
+  - Displays task description and formatted completion date/time.
+  - Adds an "Undo" button to each item, calling `toggleTaskCompletion` with `markComplete = false`.
+- Cached history-related DOM elements (`#completed-task-list`, `#completed-task-list-container`, `#toggle-history-btn`) in `app.js`.
+- Updated `DOMContentLoaded` event listener in `app.js`:
+  - Modified `#toggle-history-btn` click listener to be `async`, call `fetchHistoryData` when showing, and hide/show the container.
+- Updated `fetchInitialData` in `app.js` to clear `completedTasks` and render an empty history list initially.
+- Updated `deleteClient` and `deleteTask` in `app.js` to also refresh history via `fetchHistoryData` if the history panel is visible.
+- Added comments in `templates/index.html` indicating where completion checkbox and history item details will be rendered.
+- Added CSS styles in `static/css/style.css` for:
+  - Task completion checkbox (`.task-completion`, `input[type="checkbox"]`).
+  - Completed task list items (`#completed-task-list li`, `.completed-task-details`, `.task-description`, `.task-completed-date`).
+  - Undo button (`.undo-btn`).
+- Performed manual testing of task completion, history view, and undo functionality.
+- Updated `implementation-plan.md` to mark Phase 6 as complete. 

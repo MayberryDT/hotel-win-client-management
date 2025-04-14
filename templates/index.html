@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Client Task Manager</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <h1>Client Task Manager</h1>
+
+    <div class="container">
+        <!-- Status Message Area -->
+        <div id="status-message" role="alert"></div>
+
+        <div id="central-editing-area" class="panel">
+            <h2 id="editing-form-title">Add Client</h2>
+            <!-- Unified Form for Adding/Editing Clients and Tasks -->
+            <form id="editing-form" novalidate>
+                <input type="hidden" id="edit-id-input" value="">
+                <input type="hidden" id="edit-mode-input" value="client">
+
+                <!-- Client Name Field (shown in client mode) -->
+                <div id="client-fields">
+                    <label for="client-name-input">Client Name:</label>
+                    <input type="text" id="client-name-input" name="client-name" required>
+                </div>
+
+                <!-- Task Fields (shown in task mode) -->
+                <div id="task-fields" style="display: none;">
+                    <div>
+                        <label for="task-description-input">Task Description:</label>
+                        <input type="text" id="task-description-input" name="task-description" required>
+                    </div>
+                    <div>
+                        <label for="task-due-date-input">Due Date:</label>
+                        <input type="date" id="task-due-date-input" name="task-due-date">
+                    </div>
+                 </div>
+
+                 <!-- Form Actions/Buttons -->
+                 <div class="form-actions">
+                    <button type="submit" id="edit-submit-btn">Add Client</button>
+                    <button type="button" id="edit-cancel-btn" class="action-btn" style="display: none;">Cancel</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="main-content">
+            <div id="client-list-area" class="panel">
+                <h2>Clients</h2>
+                <!-- Client list will be dynamically loaded here -->
+                <ul id="client-list">
+                    <li class="placeholder">Loading clients...</li>
+                </ul>
+            </div>
+
+            <div id="task-display-area" class="panel">
+                <h2>Tasks for <span id="selected-client-name">Selected Client</span></h2>
+                <!-- Tasks for the selected client will be dynamically loaded here -->
+                <ul id="task-list">
+                    <li class="placeholder">Select a client to view tasks.</li>
+                </ul>
+            </div>
+        </div>
+
+
+        <div id="history-area" class="panel">
+            <h2>Completed Task History <button id="toggle-history-btn" class="action-btn" style="margin-left: 10px; font-size: 0.85em;">Show</button></h2>
+            <div id="completed-task-list-container" style="display: none;">
+                <ul id="completed-task-list">
+                    <li class="placeholder">Loading history...</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html> 

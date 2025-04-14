@@ -1,0 +1,26 @@
+Phase 5: Task Management Implementation (UI + Logic) - Completed
+
+- Refactored `templates/index.html` to unify the central editing form (`#editing-form`) for clients and tasks.
+  - Added task description (`#task-description-input`) and due date (`#task-due-date-input`) fields.
+  - Added hidden inputs (`#edit-id-input`, `#edit-mode-input`) to manage form state.
+  - Updated form title (`#editing-form-title`) and buttons (`#edit-submit-btn`, `#edit-cancel-btn`) dynamically.
+  - Updated task list title (`#selected-client-name`) to show the current client.
+- Updated `static/css/style.css` to add styles for:
+  - Task list items (`#task-list li`), details (`.task-details`, `.task-description`, `.task-due-date`), and actions (`.task-actions`).
+  - Unified form (`#editing-form`) layout and input styling.
+- Updated `static/js/app.js` significantly:
+  - Cached frequently used DOM elements.
+  - Added `selectedTask` global state.
+  - Implemented `renderTaskList` to display tasks with details (description, formatted due date), sort by due date, and add Edit/Delete buttons.
+  - Implemented unified form management functions (`resetForm`, `setupTaskForm`) to handle switching between client/task add/edit modes.
+  - Updated `startEditClient` and created `startEditTask` to use the new form logic.
+  - Implemented `handleFormSubmit` to delegate to `handleClientSubmit` or `handleTaskSubmit`.
+  - Implemented `handleTaskSubmit` to handle `POST` (add) and `PUT` (edit) API calls for tasks.
+  - Implemented `deleteTask` with confirmation and `DELETE` API call.
+  - Updated `selectClient` to reset the form to 'Add Task' mode for the selected client.
+  - Ensured all CRUD operations refresh data via `fetchInitialData` and update the UI.
+  - Refined API error handling in `apiCall`.
+  - Updated event listeners for the unified form and cancel button.
+- Performed manual testing of Add Task, Edit Task, Delete Task, and switching between client/task modes.
+- Verified tasks are displayed sorted by due date.
+- Updated `implementation-plan.md` to mark Phase 5 as complete. 

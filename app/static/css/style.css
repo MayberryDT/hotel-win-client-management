@@ -1,0 +1,505 @@
+/* Basic Reset & Body Styles */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"; /* System UI Font Stack */
+    margin: 0; /* Remove default margin */
+    padding: 0; /* Ensure no padding */
+    background-color: #f0f2f5; /* Lighter grey */
+    color: #1c1e21; /* Darker text for contrast */
+    line-height: 1.5; /* Slightly tighter line height */
+    font-size: 14px; /* Slightly smaller base font size */
+}
+
+h1 {
+    text-align: center;
+    color: #333;
+    background-color: #ffffff;
+    padding: 15px 0;
+    margin: 0 0 15px 0; /* Adjust margin */
+    font-size: 1.8em;
+    border-bottom: 1px solid #e0e0e0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+/* Layout Container */
+.container {
+    max-width: 1100px; /* Slightly narrower max-width */
+    margin: 0 auto; /* Center container without top/bottom margin */
+    padding: 15px; /* Reduce padding */
+    /* Removed background and shadow - applied to inner elements */
+}
+
+/* Main Content Layout (Clients & Tasks side-by-side) */
+.main-content {
+    display: flex;
+    flex-wrap: wrap; /* Allow wrapping on smaller screens */
+    gap: 15px; /* Reduce gap */
+    margin-bottom: 15px;
+}
+
+/* Shared Panel Styling */
+.panel {
+    border: 1px solid #dce0e6; /* Softer border */
+    padding: 12px; /* Reduce padding */
+    border-radius: 6px; /* Slightly smaller radius */
+    background-color: #ffffff;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    display: flex;
+    flex-direction: column; /* Ensure vertical layout */
+}
+
+#client-list-area {
+    flex: 1; /* Takes up 1 part */
+    min-width: 220px; /* Ensure enough space */
+    /* Inherits .panel styles */
+}
+
+#task-display-area {
+    flex: 2.5; /* Takes up more space */
+    min-width: 300px; /* Ensure enough space */
+    /* Inherits .panel styles */
+}
+
+/* Central Editing Area */
+#central-editing-area {
+    /* Inherits .panel styles */
+    margin-bottom: 15px; /* Consistent spacing */
+    background-color: #f7f8fa; /* Slightly different background */
+}
+
+/* History Area */
+#history-area {
+    /* Inherits .panel styles */
+    margin-top: 15px; /* Consistent spacing */
+}
+
+#completed-task-list-container {
+    margin-top: 8px; /* Reduce margin */
+    max-height: 250px; /* Limit height */
+    overflow-y: auto; /* Add scroll if needed */
+    border-top: 1px solid #e0e0e0; /* Softer border */
+    padding-top: 8px; /* Reduce padding */
+}
+
+/* Section Headings */
+h2 {
+    margin-top: 0;
+    color: #333;
+    border-bottom: 1px solid #e0e0e0; /* Softer border */
+    padding-bottom: 6px; /* Reduce padding */
+    margin-bottom: 10px;
+    font-size: 1.1em; /* Slightly smaller headings */
+    font-weight: 600; /* Semi-bold */
+}
+
+/* List Styling */
+ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+    overflow-y: auto; /* Allow scrolling within panels if content overflows */
+    flex-grow: 1; /* Allow lists to fill panel height */
+}
+
+li {
+    padding: 6px 0; /* Reduce padding */
+    border-bottom: 1px solid #e8e8e8; /* Lighter border */
+    display: flex; /* Use flex for alignment */
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.95em; /* Slightly smaller list item font */
+}
+
+li:last-child {
+    border-bottom: none;
+}
+
+/* Placeholder Styling */
+li.placeholder {
+    color: #777;
+    font-style: italic;
+    justify-content: center; /* Center placeholder text */
+    padding: 10px 0;
+}
+
+/* Buttons (General) */
+button {
+    padding: 6px 12px; /* Smaller padding */
+    background-color: #1877f2; /* Facebook Blue */
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s, opacity 0.2s;
+    font-size: 0.9em; /* Smaller button text */
+    line-height: 1.2; /* Adjust line height for smaller buttons */
+    vertical-align: middle; /* Align buttons better with text/inputs */
+}
+
+button:hover {
+    background-color: #166fe5; /* Darker blue */
+}
+
+button:disabled {
+    background-color: #bdc3c7; /* Grey out disabled buttons */
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+/* Action Buttons (Edit/Delete/Undo) */
+.action-btn {
+    padding: 3px 6px;
+    font-size: 0.8em;
+    margin-left: 4px; /* Slightly reduced margin */
+}
+
+.edit-btn {
+    background-color: #f39c12; /* Orange */
+}
+.edit-btn:hover {
+    background-color: #e67e22; /* Darker Orange */
+}
+
+.delete-btn {
+    background-color: #e74c3c; /* Red */
+}
+.delete-btn:hover {
+    background-color: #c0392b; /* Darker Red */
+}
+
+.undo-btn {
+    background-color: #3498db; /* Blue */
+}
+.undo-btn:hover {
+    background-color: #2980b9; /* Darker Blue */
+}
+
+/* Client List Specific Styles */
+#client-list li {
+    cursor: pointer;
+    padding: 8px 10px; /* Keep slightly more padding for click targets */
+    transition: background-color 0.15s;
+}
+
+#client-list li:hover {
+    background-color: #f0f2f5; /* Lighter hover */
+}
+
+#client-list li.selected {
+    background-color: #e7f3ff; /* Light blue selected */
+    font-weight: 600; /* Semi-bold */
+    color: #1877f2; /* Blue text */
+    border-left: 3px solid #1877f2; /* Add indicator */
+    padding-left: 7px; /* Adjust padding for border */
+}
+
+#client-list .client-name {
+    flex-grow: 1; /* Allow name to take available space */
+    margin-right: 5px; /* Space before buttons */
+    overflow: hidden; /* Prevent long names from breaking layout */
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#client-list .client-actions {
+    flex-shrink: 0; /* Prevent buttons shrinking */
+}
+
+/* Task List Specific Styles */
+#task-list li {
+    padding: 6px 8px; /* Tighter padding */
+    align-items: flex-start; /* Align items to top */
+}
+
+#task-list .task-completion {
+    margin-right: 8px; /* Space between checkbox and details */
+    padding-top: 2px; /* Align checkbox better */
+}
+
+#task-list .task-completion input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    vertical-align: middle;
+}
+
+#task-list .task-details {
+    flex-grow: 1;
+    margin-right: 8px; /* Space before action buttons */
+}
+
+#task-list .task-description {
+    display: block;
+    margin-bottom: 2px; /* Space between description and date */
+    word-break: break-word; /* Allow long descriptions to wrap */
+}
+
+#task-list .task-due-date {
+    font-size: 0.85em; /* Smaller date */
+    color: #606770; /* Softer color */
+}
+
+#task-list .task-actions {
+    flex-shrink: 0; /* Prevent buttons shrinking */
+    padding-top: 1px; /* Align buttons */
+}
+
+/* Completed Task History List */
+#completed-task-list li {
+    padding: 6px 8px; /* Tighter padding */
+    background-color: #f7f8fa; /* Slightly different background for completed */
+}
+
+#completed-task-list .completed-task-details {
+    flex-grow: 1;
+    margin-right: 8px;
+    opacity: 0.8; /* Slightly faded */
+}
+
+#completed-task-list .task-description {
+    display: block;
+    word-break: break-word;
+}
+
+#completed-task-list .task-completed-date {
+    font-size: 0.85em;
+    color: #606770;
+    display: block; /* Put on new line */
+    margin-top: 2px;
+}
+
+#completed-task-list .completed-task-actions {
+     flex-shrink: 0;
+}
+
+/* Form Styles */
+#editing-form {
+    display: flex;
+    flex-wrap: wrap; /* Allow wrapping */
+    gap: 10px; /* Space between elements */
+    align-items: flex-end; /* Align bottoms of elements */
+}
+
+#editing-form label {
+    display: block; /* Labels on top */
+    margin-bottom: 3px;
+    font-weight: 600; /* Semi-bold labels */
+    font-size: 0.9em;
+    color: #606770;
+}
+
+#editing-form input[type="text"],
+#editing-form input[type="date"] {
+    width: 100%; /* Full width within their container */
+    padding: 8px 10px; /* Comfortable padding */
+    border: 1px solid #ccd0d5; /* Softer border */
+    border-radius: 4px;
+    font-size: 0.95em;
+    box-sizing: border-box; /* Include padding in width */
+}
+
+#editing-form input[type="date"] {
+    /* Apply specific styles if needed, but defaults are usually okay */
+    min-width: 150px; /* Ensure date input is usable */
+}
+
+/* Form Field Containers */
+#editing-form > div {
+    flex-grow: 1; /* Allow input groups to grow */
+}
+
+#editing-form #client-fields {
+     min-width: 200px; /* Minimum width for client name */
+}
+
+#editing-form #task-fields {
+    display: flex; /* Use flex for side-by-side description/date */
+    flex-wrap: wrap; /* Allow wrapping */
+    gap: 10px;
+    flex-grow: 2; /* Allow task fields to take more space */
+}
+
+#editing-form #task-fields > div {
+    flex: 1; /* Distribute space within task fields */
+    min-width: 150px; /* Ensure fields don't get too small */
+}
+
+/* Form Buttons Container */
+#editing-form .form-actions {
+    display: flex;
+    gap: 8px; /* Space between buttons */
+    align-items: flex-end; /* Align with bottom of inputs */
+    margin-left: auto; /* Push buttons to the right if space allows in some layouts */
+     padding-bottom: 2px; /* Align with input bottom border */
+}
+
+/* Status Message Area */
+#status-message {
+    padding: 8px 12px;
+    margin: 10px 0;
+    border-radius: 4px;
+    font-size: 0.9em;
+    text-align: center;
+    display: none; /* Hidden by default */
+    opacity: 0;
+    transition: opacity 0.5s ease-in-out;
+}
+
+#status-message.success {
+    background-color: #d4edda; /* Green */
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+#status-message.error {
+    background-color: #f8d7da; /* Red */
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+#status-message.loading {
+    background-color: #e2e3e5; /* Grey */
+    color: #383d41;
+    border: 1px solid #d6d8db;
+}
+
+/* Loading Indicator (Simple Text) */
+.loading-indicator {
+    font-style: italic;
+    color: #888;
+    padding: 5px 0;
+    font-size: 0.9em;
+    /* display: none; */ /* Control display via JS */
+}
+
+
+/* --- Responsive Design --- */
+
+/* Medium screens (Tablets) */
+@media (max-width: 768px) {
+    body {
+        font-size: 13px; /* Slightly smaller base font */
+    }
+
+    h1 {
+        font-size: 1.6em;
+        padding: 12px 0;
+    }
+
+    .main-content {
+        flex-direction: column; /* Stack client and task lists */
+    }
+
+    #client-list-area,
+    #task-display-area {
+        min-width: 100%; /* Take full width when stacked */
+        flex-basis: auto; /* Reset flex basis */
+    }
+
+    #editing-form #task-fields {
+        flex-direction: column; /* Stack task description and date */
+        gap: 0; /* Remove gap when stacked */
+    }
+     #editing-form #task-fields > div {
+        width: 100%; /* Full width when stacked */
+        margin-bottom: 10px; /* Add space between stacked fields */
+    }
+     #editing-form .form-actions {
+        width: 100%; /* Full width buttons */
+        justify-content: flex-start; /* Align buttons left */
+        margin-top: 5px;
+    }
+    #edit-submit-btn {
+        flex-grow: 1; /* Make submit button larger */
+    }
+
+
+}
+
+/* Small screens (Mobile) */
+@media (max-width: 480px) {
+    body {
+        font-size: 12px; /* Even smaller base font */
+    }
+     h1 {
+        font-size: 1.4em;
+        padding: 10px 0;
+    }
+    .container {
+        padding: 10px; /* Reduce padding further */
+    }
+
+     .panel {
+        padding: 10px; /* Reduce panel padding */
+    }
+
+    button {
+        padding: 8px 10px; /* Slightly larger touch targets */
+        font-size: 1em; /* Reset font size for readability */
+    }
+
+    .action-btn {
+        padding: 4px 7px;
+        font-size: 0.85em;
+    }
+
+    li {
+         font-size: 1em; /* Reset list item font size */
+    }
+
+    #task-list .task-due-date,
+    #completed-task-list .task-completed-date {
+        font-size: 0.9em;
+    }
+
+     #editing-form {
+        gap: 8px;
+     }
+     #editing-form label {
+         font-size: 0.95em;
+     }
+     #editing-form input[type="text"],
+     #editing-form input[type="date"] {
+        padding: 10px; /* Larger touch targets */
+        font-size: 1em;
+     }
+
+     #editing-form .form-actions {
+         flex-direction: column; /* Stack buttons vertically */
+         align-items: stretch; /* Make buttons full width */
+     }
+     #edit-cancel-btn {
+         margin-top: 5px;
+     }
+}
+
+/* Adjustments based on Phase 6 styles */
+/* Active Task List Item - Checkbox */
+#task-list .task-completion input[type="checkbox"] {
+    width: 16px; /* Consistent size */
+    height: 16px;
+    cursor: pointer;
+}
+
+/* Style for completed tasks (e.g., strikethrough) */
+/* Already implicitly handled by moving to history */
+/* If needed, add:
+#task-list li.completed .task-details {
+    text-decoration: line-through;
+    opacity: 0.6;
+}
+*/
+
+/* Completed Task History List - Inherits general list styling now */
+#completed-task-list .task-completed-date {
+    /* Styling handled above */
+}
+
+#completed-task-list .undo-btn {
+    /* Styling handled by .action-btn and .undo-btn classes */
+}
+
+/* Add class to relevant parent elements in HTML if not already done */
+#client-list-area, #task-display-area, #central-editing-area, #history-area {
+    /* Apply .panel styles */
+    /* This is done via adding class="panel" in HTML if needed */
+} 

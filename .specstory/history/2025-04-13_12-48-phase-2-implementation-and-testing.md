@@ -1,0 +1,445 @@
+## SpecStory
+
+## Phase 2 Implementation and Testing (4/13/2025, 12:48:51 PM)
+
+_**User**_
+
+@implementation-plan.md @phase1_log.txt 
+
+Read all attached documentation for context
+
+Let's complete 'Phase 2' from the implementation-plan, but do not go outside of scope, and when you're done write how confident you are (x/100 score) in what you made and why.
+
+Again, DO NOT go outside the scope of this task.
+
+Make sure to test what you write, and edit the code until the tests pass.
+
+After finishing, update the implementation-plan and add logs to the implementation-logs folder
+
+---
+
+_**Assistant**_
+
+
+
+---
+
+_****_
+
+Okay, let's implement Phase 2: Backend API Endpoints.
+
+First, I need to understand the current state of the project. I'll read the existing files mentioned in the Phase 1 log (`app/main.py`, `app/db_setup.py`, `requirements.txt`, `tests/test_db.py`) to see the starting point.
+
+
+
+---
+
+_****_
+
+Read file: undefined
+
+---
+
+_****_
+
+Read file: undefined
+
+---
+
+_****_
+
+Read file: undefined
+
+---
+
+_****_
+
+Read file: undefined
+
+---
+
+_****_
+
+
+
+---
+
+_****_
+
+Okay, I will now implement the API endpoints as defined in Phase 2 of the `implementation-plan.md`.
+
+First, I'll implement the required routes and logic in `app/main.py`.
+
+
+
+---
+
+_****_
+
+```diff
+- from flask import Flask
++ import sqlite3
++ from flask import Flask, request, jsonify
++ from datetime import datetime, date
++ 
++ from .db_setup import get_db_connection
+  
+  app = Flask(__name__)
+  
+- # Placeholder route
+- @app.route('/')
+- def hello_world():
+-     return 'Hello, World! Backend is running.'
++ # Helper to convert row object to dictionary, handling date/time
++ def row_to_dict(row):
++     d = dict(row)
++     for key, value in d.items():
++         if isinstance(value, (datetime, date)):
++             # Use ISO 8601 format
++             d[key] = value.isoformat()
++         elif key == 'is_completed':
++             # Convert 0/1 to boolean for JSON
++             d[key] = bool(value)
++     return d
++ 
++ # Error Handling
++ @app.errorhandler(404)
++ def not_found_error(error):
++     return jsonify({"error": "Not Found"}), 404
++ 
++ @app.errorhandler(400)
++ def bad_request_error(error):
++     return jsonify({"error": "Bad Request", "message": str(error)}), 400
++ 
++ @app.errorhandler(Exception)
++ def internal_error(error):
++     # Log the error internally? For now, just a generic message.
++     print(f"Internal Server Error: {error}") # Log to console for debugging
++     return jsonify({"error": "Internal Server Error"}), 500
++ 
++ 
++ # --- Client Endpoints ---
++ 
++ @app.route('/api/clients', methods=['GET'])
++ def get_clients():
++     conn = get_db_connection()
++     clients = conn.execute('SELECT * FROM clients ORDER BY name').fetchall()
++     conn.close()
++     return jsonify([row_to_dict(client) for client in clients])
++ 
++ @app.route('/api/clients', methods=['POST'])
++ def add_client():
++     data = request.get_json()
++     if not data or not data.get('name'):
++         return jsonify({"error": "Missing 'name' field"}), 400
++ 
++     name = data['name']
++     conn = get_db_connection()
++     try:
++         cursor = conn.execute('INSERT INTO clients (name) VALUES (?)', (name,))
++         new_client_id = cursor.lastrowid
++         conn.commit()
++         new_client = conn.execute('SELECT * FROM clients WHERE client_id = ?', (new_client_id,)).fetchone()
++         conn.close()
++         if new_client:
++             return jsonify(row_to_dict(new_client)), 201
++         else:
++              # Should not happen if insert succeeded, but good practice
++             return jsonify({"error": "Failed to retrieve created client"}), 500
++     except sqlite3.IntegrityError as e:
++          conn.rollback()
++          conn.close()
++          # Handle potential future integrity constraints (e.g., unique name)
++          return jsonify({"error": "Database integrity error", "message": str(e)}), 400
++     except Exception as e:
++         conn.rollback()
++         conn.close()
++         raise e # Re-raise for generic error handler
++ 
++ 
++ @app.route('/api/clients/<int:client_id>', methods=['PUT'])
++ def update_client(client_id):
++     data = request.get_json()
++     if not data or not data.get('name'):
++         return jsonify({"error": "Missing 'name' field"}), 400
++ 
++     name = data['name']
++     conn = get_db_connection()
++     cursor = conn.execute('UPDATE clients SET name = ? WHERE client_id = ?', (name, client_id))
++     if cursor.rowcount == 0:
++         conn.close()
++         return jsonify({"error": "Client not found"}), 404
++ 
++     conn.commit()
++     updated_client = conn.execute('SELECT * FROM clients WHERE client_id = ?', (client_id,)).fetchone()
++     conn.close()
++     return jsonify(row_to_dict(updated_client))
++ 
++ @app.route('/api/clients/<int:client_id>', methods=['DELETE'])
++ def delete_client(client_id):
++     conn = get_db_connection()
++     # Foreign key CASCADE should handle tasks, but we check existence first
++     cursor = conn.execute('DELETE FROM clients WHERE client_id = ?', (client_id,))
++     if cursor.rowcount == 0:
++         conn.close()
++         return jsonify({"error": "Client not found"}), 404
++ 
++     conn.commit()
++     conn.close()
++     return '', 204 # No Content
++ 
++ 
++ # --- Task Endpoints ---
++ 
++ @app.route('/api/tasks', methods=['GET'])
++ def get_tasks():
++     client_id = request.args.get('client_id', type=int)
++     conn = get_db_connection()
++ 
++     query = 'SELECT * FROM tasks WHERE is_completed = 0'
++     params = []
++     if client_id:
++         query += ' AND client_id = ?'
++         params.append(client_id)
++     query += ' ORDER BY due_date IS NULL, due_date ASC' # Sort null due dates last
++ 
++     tasks = conn.execute(query, params).fetchall()
++     conn.close()
++     return jsonify([row_to_dict(task) for task in tasks])
++ 
++ @app.route('/api/tasks', methods=['POST'])
++ def add_task():
++     data = request.get_json()
++     client_id = data.get('client_id')
++     description = data.get('description')
++     due_date_str = data.get('due_date') # Expecting YYYY-MM-DD
++ 
++     if not all([client_id, description]):
++          return jsonify({"error": "Missing 'client_id' or 'description'"}), 400
++ 
++     # Validate due_date format if provided
++     due_date = None
++     if due_date_str:
++         try:
++             due_date = date.fromisoformat(due_date_str)
++         except ValueError:
++             return jsonify({"error": "Invalid 'due_date' format. Use YYYY-MM-DD."}), 400
++ 
++     conn = get_db_connection()
++     try:
++         # Check if client exists
++         client = conn.execute('SELECT client_id FROM clients WHERE client_id = ?', (client_id,)).fetchone()
++         if not client:
++             conn.close()
++             return jsonify({"error": f"Client with id {client_id} not found"}), 400
++ 
++         cursor = conn.execute(
++             'INSERT INTO tasks (client_id, description, due_date) VALUES (?, ?, ?)',
++             (client_id, description, due_date)
++         )
++         new_task_id = cursor.lastrowid
++         conn.commit()
++         new_task = conn.execute('SELECT * FROM tasks WHERE task_id = ?', (new_task_id,)).fetchone()
++         conn.close()
++         if new_task:
++              return jsonify(row_to_dict(new_task)), 201
++         else:
++              return jsonify({"error": "Failed to retrieve created task"}), 500
++     except sqlite3.IntegrityError as e:
++         conn.rollback()
++         conn.close()
++         # This primarily catches the foreign key constraint if client_id is invalid
++         # Although we checked above, this is a safeguard.
++         return jsonify({"error": "Database integrity error, likely invalid client_id", "message": str(e)}), 400
++     except Exception as e:
++         conn.rollback()
++         conn.close()
++         raise e
++ 
++ @app.route('/api/tasks/<int:task_id>', methods=['PUT'])
++ def update_task(task_id):
++     data = request.get_json()
++     description = data.get('description')
++     due_date_str = data.get('due_date') # Expecting YYYY-MM-DD or null
++ 
++     if description is None and due_date_str is None:
++         return jsonify({"error": "Missing 'description' or 'due_date' field to update"}), 400
++ 
++     due_date = None
++     if due_date_str is not None: # Allow setting due_date to null explicitly? Plan doesn't say. Assuming update only non-null fields for now.
++         try:
++             due_date = date.fromisoformat(due_date_str) if due_date_str else None
++         except ValueError:
++             return jsonify({"error": "Invalid 'due_date' format. Use YYYY-MM-DD."}), 400
++ 
++     conn = get_db_connection()
++     # Fetch existing task first to only update provided fields
++     task = conn.execute('SELECT * FROM tasks WHERE task_id = ?', (task_id,)).fetchone()
++     if not task:
++         conn.close()
++         return jsonify({"error": "Task not found"}), 404
++ 
++     # Prepare update fields
++     update_fields = {}
++     if description is not None:
++         update_fields['description'] = description
++     if due_date_str is not None: # Check if due_date was provided in request
++         update_fields['due_date'] = due_date # due_date could be None if due_date_str was empty/null
++ 
++     if not update_fields:
++         conn.close()
++         return jsonify({"error": "No valid fields provided for update"}), 400
++ 
++     set_clause = ", ".join([f"{key} = ?" for key in update_fields.keys()])
++     params = list(update_fields.values())
++     params.append(task_id)
++ 
++     cursor = conn.execute(f'UPDATE tasks SET {set_clause} WHERE task_id = ?', params)
++     if cursor.rowcount == 0: # Should not happen if fetch worked, but check anyway
++         conn.rollback() # Should not commit if update failed
++         conn.close()
++         return jsonify({"error": "Task not found during update"}), 404
++ 
++     conn.commit()
++     updated_task = conn.execute('SELECT * FROM tasks WHERE task_id = ?', (task_id,)).fetchone()
++     conn.close()
++     return jsonify(row_to_dict(updated_task))
++ 
++ 
++ @app.route('/api/tasks/<int:task_id>', methods=['DELETE'])
++ def delete_task(task_id):
++     conn = get_db_connection()
++     cursor = conn.execute('DELETE FROM tasks WHERE task_id = ?', (task_id,))
++     if cursor.rowcount == 0:
++         conn.close()
++         return jsonify({"error": "Task not found"}), 404
++ 
++     conn.commit()
++     conn.close()
++     return '', 204 # No Content
++ 
++ @app.route('/api/tasks/<int:task_id>/complete', methods=['PATCH'])
++ def complete_task(task_id):
++     conn = get_db_connection()
++     now = datetime.now()
++     cursor = conn.execute(
++         'UPDATE tasks SET is_completed = 1, completed_at = ? WHERE task_id = ?',
++         (now, task_id)
++     )
++     if cursor.rowcount == 0:
++         conn.close()
++         return jsonify({"error": "Task not found"}), 404
++ 
++     conn.commit()
++     updated_task = conn.execute('SELECT * FROM tasks WHERE task_id = ?', (task_id,)).fetchone()
++     conn.close()
++     return jsonify(row_to_dict(updated_task))
++ 
++ @app.route('/api/tasks/<int:task_id>/incomplete', methods=['PATCH'])
++ def incomplete_task(task_id):
++     conn = get_db_connection()
++     cursor = conn.execute(
++         'UPDATE tasks SET is_completed = 0, completed_at = NULL WHERE task_id = ?',
++         (task_id,)
++     )
++     if cursor.rowcount == 0:
++         conn.close()
++         return jsonify({"error": "Task not found"}), 404
++ 
++     conn.commit()
++     updated_task = conn.execute('SELECT * FROM tasks WHERE task_id = ?', (task_id,)).fetchone()
++     conn.close()
++     return jsonify(row_to_dict(updated_task))
++ 
++ # --- History Endpoint ---
++ 
++ @app.route('/api/tasks/history', methods=['GET'])
++ def get_task_history():
++     conn = get_db_connection()
++     # Fetch completed tasks, sorted by completion date descending
++     tasks = conn.execute(
++         'SELECT * FROM tasks WHERE is_completed = 1 ORDER BY completed_at DESC'
++     ).fetchall()
++     conn.close()
++     return jsonify([row_to_dict(task) for task in tasks])
++ 
++ 
++ # --- Consolidated Data Endpoint ---
++ 
++ @app.route('/api/data', methods=['GET'])
++ def get_all_data():
++     conn = get_db_connection()
++     clients = conn.execute('SELECT * FROM clients ORDER BY name').fetchall()
++     # Fetch only active tasks, sorted by due date
++     tasks = conn.execute(
++         'SELECT * FROM tasks WHERE is_completed = 0 ORDER BY client_id, due_date IS NULL, due_date ASC'
++     ).fetchall()
++     conn.close()
++ 
++     # Structure data: list of clients, each with a list of their active tasks
++     client_dict = {client['client_id']: row_to_dict(client) for client in clients}
++     for client_id in client_dict:
++         client_dict[client_id]['tasks'] = [] # Initialize empty task list
++ 
++     for task in tasks:
++         task_dict = row_to_dict(task)
++         client_id = task_dict['client_id']
++         if client_id in client_dict:
++             client_dict[client_id]['tasks'].append(task_dict)
++ 
++     # Return clients as a list, maintaining the original order
++     result_clients = [client_dict[client['client_id']] for client in clients]
++ 
++     return jsonify({"clients": result_clients})
++ 
++ 
++ # --- Root Endpoint (Optional - Keep or remove) ---
++ # @app.route('/')
++ # def hello_world():
++ #     return 'Hello, World! Backend is running.'
+  
+  if __name__ == '__main__':
++     # Ensure database is initialized before running the app
++     from .db_setup import initialize_database
++     initialize_database()
+      # Note: Debug mode should be False in production
+-     app.run(debug=True) 
++     # Use host='0.0.0.0' to make it accessible on the network
++     app.run(host='0.0.0.0', port=5000, debug=True) 
+```
+
+---
+
+_****_
+
+Now, I need to create tests for these new API endpoints. I'll create a new file `tests/test_api.py` for this purpose.
+
+
+
+---
+
+_**User**_
+
+Please do not stop, we are wasting requests
+
+---
+
+_**Assistant**_
+
+
+
+---
+
+_****_
+
+You are absolutely right. Apologies for the interruption.
+
+I will now create the test file `tests/test_api.py` and implement the necessary tests for the API endpoints.
+
+
+---
+
+
+
+---
+
