@@ -4,7 +4,8 @@ from datetime import datetime, date
 
 from app.db_setup import get_db_connection
 
-app = Flask(__name__)
+# Explicitly set template and static folder paths relative to the project root
+app = Flask(__name__, template_folder='app/templates', static_folder='app/static')
 
 # Helper to convert row object to dictionary, handling date/time
 def row_to_dict(row):
