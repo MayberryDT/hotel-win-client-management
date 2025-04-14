@@ -7,6 +7,10 @@ from app.db_setup import get_db_connection
 # Explicitly set template and static folder paths relative to the project root
 app = Flask(__name__, template_folder='app/templates', static_folder='app/static')
 
+# Ensure database is initialized when the app starts
+from app.db_setup import initialize_database
+initialize_database()
+
 # Helper to convert row object to dictionary, handling date/time
 def row_to_dict(row):
     d = dict(row)
