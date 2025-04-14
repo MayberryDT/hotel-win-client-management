@@ -1,0 +1,9 @@
+[build]
+  command = "pip install -r requirements.txt"
+  publish = "app/static"
+
+[dev]
+  command = "set FLASK_APP=app.main:app && set FLASK_ENV=development && flask run"
+
+[production] # Or use [context.production.run] if preferred
+  command = "gunicorn app.main:app" 
