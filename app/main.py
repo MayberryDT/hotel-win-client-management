@@ -1,11 +1,11 @@
-import sqlite3
+import psycopg2
 from flask import Flask, request, jsonify, render_template
 from datetime import datetime, date
 
 from app.db_setup import get_db_connection
 
 # Explicitly set template and static folder paths relative to the project root
-app = Flask(__name__, template_folder='templates', static_folder='static')
+app = Flask(__name__, template_folder='app/templates', static_folder='app/static')
 
 # Ensure database is initialized when the app starts
 from app.db_setup import initialize_database
@@ -44,7 +44,10 @@ def internal_error(error):
 @app.route('/api/clients', methods=['GET'])
 def get_clients():
     conn = get_db_connection()
-    clients = conn.execute('SELECT * FROM clients ORDER BY name').fetchall()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM clients ORDER BY name')
+    clients = cursor.fetchall()
+    cursor.close()
     conn.close()
     return jsonify([row_to_dict(client) for client in clients])
 
@@ -56,24 +59,30 @@ def add_client():
 
     name = data['name']
     conn = get_db_connection()
+    cursor = conn.cursor()
     try:
-        cursor = conn.execute('INSERT INTO clients (name) VALUES (?)', (name,))
-        new_client_id = cursor.lastrowid
+        cursor.execute('INSERT INTO clients (name) VALUES (%s) RETURNING client_id', (name,))
+        new_client_id = cursor.fetchone()['client_id']
         conn.commit()
-        new_client = conn.execute('SELECT * FROM clients WHERE client_id = ?', (new_client_id,)).fetchone()
+        cursor.execute('SELECT * FROM clients WHERE client_id = %s', (new_client_id,))
+        new_client = cursor.fetchone()
+        cursor.close()
         conn.close()
         if new_client:
             return jsonify(row_to_dict(new_client)), 201
         else:
              # Should not happen if insert succeeded, but good practice
             return jsonify({"error": "Failed to retrieve created client"}), 500
-    except sqlite3.IntegrityError as e:
+    except psycopg2.IntegrityError as e:
          conn.rollback()
+         cursor.close()
          conn.close()
          # Handle potential future integrity constraints (e.g., unique name)
+         print(f"Database integrity error: {e}")
          return jsonify({"error": "Database integrity error", "message": str(e)}), 400
     except Exception as e:
         conn.rollback()
+        cursor.close()
         conn.close()
         raise e # Re-raise for generic error handler
 
@@ -86,26 +95,32 @@ def update_client(client_id):
 
     name = data['name']
     conn = get_db_connection()
-    cursor = conn.execute('UPDATE clients SET name = ? WHERE client_id = ?', (name, client_id))
+    cursor = conn.cursor()
+    cursor.execute('UPDATE clients SET name = %s WHERE client_id = %s', (name, client_id))
     if cursor.rowcount == 0:
+        cursor.close()
         conn.close()
         return jsonify({"error": "Client not found"}), 404
 
     conn.commit()
-    updated_client = conn.execute('SELECT * FROM clients WHERE client_id = ?', (client_id,)).fetchone()
+    cursor.execute('SELECT * FROM clients WHERE client_id = %s', (client_id,))
+    updated_client = cursor.fetchone()
+    cursor.close()
     conn.close()
     return jsonify(row_to_dict(updated_client))
 
 @app.route('/api/clients/<int:client_id>', methods=['DELETE'])
 def delete_client(client_id):
     conn = get_db_connection()
-    # Foreign key CASCADE should handle tasks, but we check existence first
-    cursor = conn.execute('DELETE FROM clients WHERE client_id = ?', (client_id,))
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM clients WHERE client_id = %s', (client_id,))
     if cursor.rowcount == 0:
+        cursor.close()
         conn.close()
         return jsonify({"error": "Client not found"}), 404
 
     conn.commit()
+    cursor.close()
     conn.close()
     return '', 204 # No Content
 
@@ -116,15 +131,18 @@ def delete_client(client_id):
 def get_tasks():
     client_id = request.args.get('client_id', type=int)
     conn = get_db_connection()
+    cursor = conn.cursor()
 
-    query = 'SELECT * FROM tasks WHERE is_completed = 0'
+    query = 'SELECT * FROM tasks WHERE is_completed = FALSE'
     params = []
     if client_id:
-        query += ' AND client_id = ?'
+        query += ' AND client_id = %s'
         params.append(client_id)
-    query += ' ORDER BY due_date IS NULL, due_date ASC' # Sort null due dates last
+    query += ' ORDER BY due_date ASC NULLS LAST'
 
-    tasks = conn.execute(query, params).fetchall()
+    cursor.execute(query, params)
+    tasks = cursor.fetchall()
+    cursor.close()
     conn.close()
     return jsonify([row_to_dict(task) for task in tasks])
 
@@ -147,33 +165,38 @@ def add_task():
             return jsonify({"error": "Invalid 'due_date' format. Use YYYY-MM-DD."}), 400
 
     conn = get_db_connection()
+    cursor = conn.cursor()
     try:
-        # Check if client exists
-        client = conn.execute('SELECT client_id FROM clients WHERE client_id = ?', (client_id,)).fetchone()
+        cursor.execute('SELECT client_id FROM clients WHERE client_id = %s', (client_id,))
+        client = cursor.fetchone()
         if not client:
+            cursor.close()
             conn.close()
             return jsonify({"error": f"Client with id {client_id} not found"}), 400
 
-        cursor = conn.execute(
-            'INSERT INTO tasks (client_id, description, due_date) VALUES (?, ?, ?)',
+        cursor.execute(
+            'INSERT INTO tasks (client_id, description, due_date) VALUES (%s, %s, %s) RETURNING task_id',
             (client_id, description, due_date)
         )
-        new_task_id = cursor.lastrowid
+        new_task_id = cursor.fetchone()['task_id']
         conn.commit()
-        new_task = conn.execute('SELECT * FROM tasks WHERE task_id = ?', (new_task_id,)).fetchone()
+        cursor.execute('SELECT * FROM tasks WHERE task_id = %s', (new_task_id,))
+        new_task = cursor.fetchone()
+        cursor.close()
         conn.close()
         if new_task:
              return jsonify(row_to_dict(new_task)), 201
         else:
              return jsonify({"error": "Failed to retrieve created task"}), 500
-    except sqlite3.IntegrityError as e:
+    except psycopg2.IntegrityError as e:
         conn.rollback()
+        cursor.close()
         conn.close()
-        # This primarily catches the foreign key constraint if client_id is invalid
-        # Although we checked above, this is a safeguard.
+        print(f"Database integrity error: {e}")
         return jsonify({"error": "Database integrity error, likely invalid client_id", "message": str(e)}), 400
     except Exception as e:
         conn.rollback()
+        cursor.close()
         conn.close()
         raise e
 
@@ -181,70 +204,65 @@ def add_task():
 def update_task(task_id):
     data = request.get_json()
     description = data.get('description')
-    # Use a different check to see if due_date was included in the request payload
     due_date_provided = 'due_date' in data
     due_date_str = data.get('due_date')
 
-    # Check if at least one field to update was provided in the request
     if description is None and not due_date_provided:
         return jsonify({"error": "Missing 'description' or 'due_date' field to update"}), 400
 
     due_date = None
-    # Validate date format only if a non-null, non-empty string was provided
     if due_date_provided and due_date_str:
         try:
             due_date = date.fromisoformat(due_date_str)
         except ValueError:
             return jsonify({"error": "Invalid 'due_date' format. Use YYYY-MM-DD."}), 400
-    elif due_date_provided and due_date_str is not None and not isinstance(due_date_str, str):
-         # Handle cases where due_date is provided but not a string (e.g., number, object)
-         # Allow None/null explicitly, but reject other non-string types
+    elif due_date_provided and due_date_str is None:
+        due_date = None
+    elif due_date_provided:
          return jsonify({"error": "Invalid 'due_date' format. Use YYYY-MM-DD string or null."}), 400
 
     conn = get_db_connection()
-    # Fetch existing task first to only update provided fields
-    task = conn.execute('SELECT * FROM tasks WHERE task_id = ?', (task_id,)).fetchone()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM tasks WHERE task_id = %s', (task_id,))
+    task = cursor.fetchone()
     if not task:
+        cursor.close()
         conn.close()
         return jsonify({"error": "Task not found"}), 404
 
-    # Prepare update fields
-    update_fields = {}
-    params_list = [] # Use a list for params to maintain order
+    params_list = []
     set_clauses = []
 
     if description is not None:
-        set_clauses.append("description = ?")
+        set_clauses.append("description = %s")
         params_list.append(description)
 
-    if due_date_provided: # Check if 'due_date' key was present in the request
-        set_clauses.append("due_date = ?")
-        # due_date is already correctly set to None if input was null/empty, or parsed date otherwise
+    if due_date_provided:
+        set_clauses.append("due_date = %s")
         params_list.append(due_date)
 
-    if not set_clauses: # Should not happen due to the check at the start, but safeguard
+    if not set_clauses:
+        cursor.close()
         conn.close()
-        # This condition might be slightly different now - maybe description was null and due_date was null?
-        # The initial check handles the case where *neither* key is present.
-        # If description=None and due_date=None ARE present, we should allow the update.
-        # Let's refine the check: if BOTH description is None (not provided) AND due_date was not provided.
-        # The check at the beginning is correct.
         return jsonify({"error": "No valid fields provided for update"}), 400
 
     set_clause = ", ".join(set_clauses)
     params_list.append(task_id)
-
-    # Use tuple for params in execute
     params = tuple(params_list)
 
-    cursor = conn.execute(f'UPDATE tasks SET {set_clause} WHERE task_id = ?', params)
-    if cursor.rowcount == 0: # Should not happen if fetch worked, but check anyway
-        conn.rollback() # Should not commit if update failed
+    query = f'UPDATE tasks SET {set_clause} WHERE task_id = %s'
+
+    cursor.execute(query, params)
+    if cursor.rowcount == 0:
+        conn.rollback()
+        cursor.close()
         conn.close()
-        return jsonify({"error": "Task not found during update"}), 404
+        return jsonify({"error": "Task not found during update or no change made"}), 404
 
     conn.commit()
-    updated_task = conn.execute('SELECT * FROM tasks WHERE task_id = ?', (task_id,)).fetchone()
+    cursor.execute('SELECT * FROM tasks WHERE task_id = %s', (task_id,))
+    updated_task = cursor.fetchone()
+    cursor.close()
     conn.close()
     return jsonify(row_to_dict(updated_task))
 
@@ -252,45 +270,56 @@ def update_task(task_id):
 @app.route('/api/tasks/<int:task_id>', methods=['DELETE'])
 def delete_task(task_id):
     conn = get_db_connection()
-    cursor = conn.execute('DELETE FROM tasks WHERE task_id = ?', (task_id,))
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM tasks WHERE task_id = %s', (task_id,))
     if cursor.rowcount == 0:
+        cursor.close()
         conn.close()
         return jsonify({"error": "Task not found"}), 404
 
     conn.commit()
+    cursor.close()
     conn.close()
     return '', 204 # No Content
 
 @app.route('/api/tasks/<int:task_id>/complete', methods=['PATCH'])
 def complete_task(task_id):
     conn = get_db_connection()
+    cursor = conn.cursor()
     now = datetime.now()
-    cursor = conn.execute(
-        'UPDATE tasks SET is_completed = 1, completed_at = ? WHERE task_id = ?',
+    cursor.execute(
+        'UPDATE tasks SET is_completed = TRUE, completed_at = %s WHERE task_id = %s',
         (now, task_id)
     )
     if cursor.rowcount == 0:
+        cursor.close()
         conn.close()
         return jsonify({"error": "Task not found"}), 404
 
     conn.commit()
-    updated_task = conn.execute('SELECT * FROM tasks WHERE task_id = ?', (task_id,)).fetchone()
+    cursor.execute('SELECT * FROM tasks WHERE task_id = %s', (task_id,))
+    updated_task = cursor.fetchone()
+    cursor.close()
     conn.close()
     return jsonify(row_to_dict(updated_task))
 
 @app.route('/api/tasks/<int:task_id>/incomplete', methods=['PATCH'])
 def incomplete_task(task_id):
     conn = get_db_connection()
-    cursor = conn.execute(
-        'UPDATE tasks SET is_completed = 0, completed_at = NULL WHERE task_id = ?',
+    cursor = conn.cursor()
+    cursor.execute(
+        'UPDATE tasks SET is_completed = FALSE, completed_at = NULL WHERE task_id = %s',
         (task_id,)
     )
     if cursor.rowcount == 0:
+        cursor.close()
         conn.close()
         return jsonify({"error": "Task not found"}), 404
 
     conn.commit()
-    updated_task = conn.execute('SELECT * FROM tasks WHERE task_id = ?', (task_id,)).fetchone()
+    cursor.execute('SELECT * FROM tasks WHERE task_id = %s', (task_id,))
+    updated_task = cursor.fetchone()
+    cursor.close()
     conn.close()
     return jsonify(row_to_dict(updated_task))
 
@@ -299,10 +328,12 @@ def incomplete_task(task_id):
 @app.route('/api/tasks/history', methods=['GET'])
 def get_task_history():
     conn = get_db_connection()
-    # Fetch completed tasks, sorted by completion date descending
-    tasks = conn.execute(
-        'SELECT * FROM tasks WHERE is_completed = 1 ORDER BY completed_at DESC'
-    ).fetchall()
+    cursor = conn.cursor()
+    cursor.execute(
+        'SELECT * FROM tasks WHERE is_completed = TRUE ORDER BY completed_at DESC'
+    )
+    tasks = cursor.fetchall()
+    cursor.close()
     conn.close()
     return jsonify([row_to_dict(task) for task in tasks])
 
@@ -312,17 +343,19 @@ def get_task_history():
 @app.route('/api/data', methods=['GET'])
 def get_all_data():
     conn = get_db_connection()
-    clients = conn.execute('SELECT * FROM clients ORDER BY name').fetchall()
-    # Fetch only active tasks, sorted by due date
-    tasks = conn.execute(
-        'SELECT * FROM tasks WHERE is_completed = 0 ORDER BY client_id, due_date IS NULL, due_date ASC'
-    ).fetchall()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM clients ORDER BY name')
+    clients = cursor.fetchall()
+    cursor.execute(
+        'SELECT * FROM tasks WHERE is_completed = FALSE ORDER BY client_id, due_date ASC NULLS LAST'
+    )
+    tasks = cursor.fetchall()
+    cursor.close()
     conn.close()
 
-    # Structure data: list of clients, each with a list of their active tasks
     client_dict = {client['client_id']: row_to_dict(client) for client in clients}
     for client_id in client_dict:
-        client_dict[client_id]['tasks'] = [] # Initialize empty task list
+        client_dict[client_id]['tasks'] = []
 
     for task in tasks:
         task_dict = row_to_dict(task)
@@ -330,7 +363,6 @@ def get_all_data():
         if client_id in client_dict:
             client_dict[client_id]['tasks'].append(task_dict)
 
-    # Return clients as a list, maintaining the original order
     result_clients = [client_dict[client['client_id']] for client in clients]
 
     return jsonify({"clients": result_clients})
