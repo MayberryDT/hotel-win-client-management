@@ -5,7 +5,7 @@ from datetime import datetime, date
 from app.db_setup import get_db_connection
 
 # Explicitly set template and static folder paths relative to the project root
-app = Flask(__name__, template_folder='app/templates', static_folder='app/static')
+app = Flask(__name__, template_folder='templates', static_folder='static')
 
 # Ensure database is initialized when the app starts
 from app.db_setup import initialize_database
